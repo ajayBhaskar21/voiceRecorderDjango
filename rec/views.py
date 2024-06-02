@@ -27,10 +27,10 @@ def convert_audio_to_text(request):
             for chunk in audio_file.chunks():
                 f.write(chunk)
 
-        # Convert webm to wav
+        # Convert webm to wav with overwrite option
         wav_path = os.path.join(media_directory, 'speech.wav')
-        convert_command = f"ffmpeg -i {webm_path} -acodec pcm_s16le -ar 16000 {wav_path}"
-        subprocess.run(convert_command, shell=True)
+        convert_command = f"ffmpeg -y -i {webm_path} -acodec pcm_s16le -ar 16000 {wav_path}"
+        subprocess.run(convert_command, shell=True, check=True)
 
         recognizer = sr.Recognizer()
         with sr.AudioFile(wav_path) as source:
