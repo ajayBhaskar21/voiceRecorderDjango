@@ -37,6 +37,8 @@ def convert_audio_to_text(request):
             audio_data = recognizer.record(source)
             try:
                 text = recognizer.recognize_google(audio_data)
+                print('the final text : ', text)
+                
                 return JsonResponse({'text': text})
             except sr.UnknownValueError:
                 return JsonResponse({'error': 'Could not understand audio'}, status=400)
