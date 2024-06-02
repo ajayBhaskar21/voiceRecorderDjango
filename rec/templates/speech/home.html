@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Voice Recorder</title>
+    {% csrf_token %}
+</head>
+<body>
+    <h1>Voice Recorder</h1>
+    <button id="startBtn" onclick="startRecording()">Start Recording</button>
+    <button id="stopBtn" onclick="stopRecording()" disabled>Stop Recording</button>
+    <button id="convertBtn" onclick="convertToText()" disabled>Convert to Text</button>
+    <audio id="audioPlayback" controls style="display: none;"></audio>
+    <p id="result"></p>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let audioBlob;
+
+        function getCsrfToken() {
+            return document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+        }
+
+        function startRecording() {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                    mediaRecorder.start();
+
+                    mediaRecorder.ondataavailable = function(e) {
+                        audioChunks.push(e.data);
+                    };
+
+                    mediaRecorder.onstop = function() {
+                        audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        audioChunks = [];
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        const audioElement = document.getElementById('audioPlayback');
+                        audioElement.src = audioUrl;
+                        audioElement.style.display = 'block';
+                        document.getElementById('convertBtn').disabled = false;
+                    };
+
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('stopBtn').disabled = false;
+                    console.log("Recording started");
+                })
+                .catch(error => {
+                    console.error('Error accessing media devices.', error);
+                    console.log("Recording error:", error);
+                });
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('startBtn').disabled = false;
+        }
+
+        function convertToText() {
+            const formData = new FormData();
+            formData.append('audio_data', audioBlob, 'speech.webm');
+
+            fetch('/convert/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.text) {
+                    document.getElementById('result').innerText = data.text;
+                } else {
+                    document.getElementById('result').innerText = data.error;
+                }
+                document.getElementById('convertBtn').disabled = true;
+                document.getElementById('startBtn').disabled = false;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    </script>
+</body>
+</html>
